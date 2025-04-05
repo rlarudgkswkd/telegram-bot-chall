@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String
+  telegramId    String?        @unique
+  username      String?
+  firstName     String?
+  lastName      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  chats         Chat[]
+  subscriptions Subscription[]
+  paymentRequests PaymentRequest[]
+}
+
+model Chat {
+  id            String         @id @default(uuid())
+  telegramChatId String        @unique
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Subscription {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  plan          String         // "trial", "monthly", "yearly"
+  status        String         @default("active") // "active", "cancelled", "expired"
+  startDate     DateTime       @default(now())
+  endDate       DateTime?
+  isTrial       Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model PaymentRequest {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  paypalOrderId String         @unique
+  amount        Float
+  currency      String         @default("USD")
+  status        String         @default("pending") // pending, completed, failed
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
