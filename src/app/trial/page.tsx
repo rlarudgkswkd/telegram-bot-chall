@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function TrialPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,10 +33,8 @@ export default function TrialPage() {
         throw new Error(data.error || 'Failed to register');
       }
 
-      const data = await response.json();
-      setSuccess('무료 체험이 시작되었습니다! 이메일을 확인하여 Telegram 봇 링크를 받으세요.');
-      setEmail('');
-      setName('');
+      // 등록 성공 시 대시보드로 이동
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || '오류가 발생했습니다.');
     } finally {

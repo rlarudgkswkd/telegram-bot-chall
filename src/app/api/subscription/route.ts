@@ -1,13 +1,23 @@
-import { NextResponse } from 'next/server';
-import DatabaseService from '@/services/databaseService';
+import { NextResponse, NextRequest } from 'next/server';
+import { DatabaseService } from '@/services/databaseService';
+import { AuthService } from '@/services/authService';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    // TODO: 실제 구현에서는 세션이나 토큰에서 사용자 ID를 가져와야 합니다.
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
+    // 토큰에서 사용자 ID 추출
+    const token = request.cookies.get('auth_token')?.value;
+    if (!token) {
       return NextResponse.json(
         { error: '인증되지 않은 요청입니다.' },
+        { status: 401 }
+      );
+    }
+
+    const authService = AuthService.getInstance();
+    const decoded = await authService.verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { error: '유효하지 않은 토큰입니다.' },
         { status: 401 }
       );
     }
@@ -15,7 +25,7 @@ export async function GET(request: Request) {
     const db = DatabaseService.getInstance();
 
     // 사용자의 구독 정보 조회
-    const subscription = await db.getUserSubscription(userId);
+    const subscription = await db.getUserSubscription(decoded.userId);
     if (!subscription) {
       return NextResponse.json(
         { error: '구독 정보가 없습니다.' },

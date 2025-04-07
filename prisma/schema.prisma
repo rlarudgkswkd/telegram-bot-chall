@@ -15,49 +15,48 @@ datasource db {
 
 model User {
   id            String         @id @default(uuid())
-  email         String         @unique
-  name          String
-  telegramId    String?        @unique
-  username      String?
-  firstName     String?
-  lastName      String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  chats         Chat[]
+  name          String?
+  email         String        @unique
+  telegramId    BigInt?       @unique
+  isActive      Boolean       @default(true)
+  userStatus    String        @default("active") // active, inactive, suspended
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   subscriptions Subscription[]
+  chats         Chat[]
   paymentRequests PaymentRequest[]
 }
 
 model Chat {
-  id            String         @id @default(uuid())
-  telegramChatId String        @unique
-  userId        String
-  user          User           @relation(fields: [userId], references: [id])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String   @id @default(uuid())
+  telegramChatId BigInt   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Subscription {
-  id            String         @id @default(uuid())
-  userId        String
-  user          User           @relation(fields: [userId], references: [id])
-  plan          String         // "trial", "monthly", "yearly"
-  status        String         @default("active") // "active", "cancelled", "expired"
-  startDate     DateTime       @default(now())
-  endDate       DateTime?
-  isTrial       Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  plan      String   // trial, basic, premium
+  status    String   // active, expired, cancelled
+  startDate DateTime @default(now())
+  endDate   DateTime
+  isTrial   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PaymentRequest {
-  id            String         @id @default(uuid())
-  userId        String
-  user          User           @relation(fields: [userId], references: [id])
-  paypalOrderId String         @unique
-  amount        Float
-  currency      String         @default("USD")
-  status        String         @default("pending") // pending, completed, failed
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  paypalOrderId String  @unique
+  amount       Float
+  currency     String   @default("USD")
+  status       String   // 'pending', 'completed', 'failed'
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

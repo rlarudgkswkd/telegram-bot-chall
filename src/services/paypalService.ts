@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import TelegramBotService from './telegramBot';
-import EmailService from './emailService';
-import DatabaseService from './databaseService';
+import { TelegramBotService } from './telegramBot';
+import { EmailService } from './emailService';
+import { DatabaseService } from './databaseService';
 
 class PayPalService {
   private static instance: PayPalService;
@@ -91,35 +91,72 @@ class PayPalService {
    */
   public async startTrial(userId: string): Promise<void> {
     try {
-      // 사용자 정보 가져오기
-      const user = await this.databaseService.getUserById(userId);
+      const user = await DatabaseService.getInstance().getUserById(userId);
       if (!user) {
-        throw new Error('User not found');
+        throw new Error('사용자를 찾을 수 없습니다.');
       }
-      
-      // 무료 체험 종료일 설정 (3일 후)
+
+      // 7일 무료 체험 구독 생성
       const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 3);
+      endDate.setDate(endDate.getDate() + 7);
       
       // 무료 체험 구독 생성
-      await this.databaseService.createSubscription(
-        userId,
-        'trial',
-        true,
-        endDate
-      );
-      
-      // 이메일로 Telegram 봇 링크 전송
-      await this.emailService.sendTelegramBotLink(
+      const db = DatabaseService.getInstance();
+      await db.createSubscription(userId, 'trial', true, endDate);
+
+      // 환영 이메일 발송
+      await EmailService.getInstance().sendTelegramBotLink(
         user.email,
-        user.name,
-        true,
-        endDate
+        user.name
       );
-      
-      console.log(`Trial started for user ${userId}`);
+
+      // 텔레그램 봇으로 환영 메시지 전송
+      if (user.telegramId) {
+        await TelegramBotService.getInstance().sendMessage(
+          user.telegramId,
+          `안녕하세요 ${user.name}님! 7일 무료 체험이 시작되었습니다.`
+        );
+      }
     } catch (error) {
-      console.error('Error starting trial:', error);
+      console.error('무료 체험 시작 중 오류:', error);
+      throw error;
+    }
+  }
+
+  public async createSubscription(userId: string, plan: 'monthly' | 'yearly'): Promise<void> {
+    try {
+      const user = await DatabaseService.getInstance().getUserById(userId);
+      if (!user) {
+        throw new Error('사용자를 찾을 수 없습니다.');
+      }
+
+      // 구독 기간 설정
+      const endDate = new Date();
+      if (plan === 'monthly') {
+        endDate.setMonth(endDate.getMonth() + 1);
+      } else {
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      }
+
+      // 구독 생성
+      const db = DatabaseService.getInstance();
+      await db.createSubscription(userId, plan, false, endDate);
+
+      // 구독 확인 이메일 발송
+      await EmailService.getInstance().sendTelegramBotLink(
+        user.email,
+        user.name
+      );
+
+      // 텔레그램 봇으로 구독 확인 메시지 전송
+      if (user.telegramId) {
+        await TelegramBotService.getInstance().sendMessage(
+          user.telegramId,
+          `구독이 성공적으로 시작되었습니다. ${plan === 'monthly' ? '월간' : '연간'} 플랜으로 이용하실 수 있습니다.`
+        );
+      }
+    } catch (error) {
+      console.error('구독 생성 중 오류:', error);
       throw error;
     }
   }

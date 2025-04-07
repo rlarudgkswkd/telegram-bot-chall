@@ -128,7 +128,7 @@ export default function DashboardPage() {
               한국어 학습 챌린지 Telegram 봇을 통해 1:1 한국어 학습을 시작하세요.
             </p>
             <a
-              href={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}`}
+              href="https://t.me/KOR_Chall_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full bg-blue-600 text-white text-center py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"

@@ -1,23 +1,26 @@
-import TelegramBot from 'node-telegram-bot-api';
-import DatabaseService from './databaseService';
+import { Telegraf, Context } from 'telegraf';
+import { DatabaseService } from './databaseService';
+import { EmailService } from './emailService';
+import { PrismaClient } from '@prisma/client';
 
-class TelegramBotService {
-  private bot: TelegramBot;
-  private static instance: TelegramBotService;
-  private databaseService: DatabaseService;
+export class TelegramBotService {
+  private bot: Telegraf;
+  private db: DatabaseService;
+  //private emailService: EmailService;
+  private prisma: PrismaClient;
+  private static instance: TelegramBotService | null = null;
+  private isInitialized: boolean = false;
+  private userStates: { [key: string]: string } = {};
 
   private constructor() {
-    // 봇 토큰 확인
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    if (!token) {
-      throw new Error('TELEGRAM_BOT_TOKEN is not set in environment variables');
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+      throw new Error('TELEGRAM_BOT_TOKEN is not defined');
     }
-    console.log('Initializing Telegram bot with token:', token.substring(0, 10) + '...');
-    
-    // 봇 초기화
-    this.bot = new TelegramBot(token, { polling: true });
-    this.databaseService = DatabaseService.getInstance();
-    this.initializeBot();
+
+    this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+    this.db = DatabaseService.getInstance();
+    //this.emailService = EmailService.getInstance();
+    this.prisma = new PrismaClient();
   }
 
   public static getInstance(): TelegramBotService {
@@ -27,76 +30,191 @@ class TelegramBotService {
     return TelegramBotService.instance;
   }
 
-  private initializeBot() {
-    // 봇 정보 가져오기
-    this.bot.getMe().then((botInfo) => {
-      console.log('Bot initialized successfully:', botInfo.username);
-    }).catch((error) => {
-      console.error('Error getting bot info:', error);
-    });
+  public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      console.log('TelegramBotService is already initialized');
+      return;
+    }
 
-    // 메시지 수신 이벤트 처리
-    this.bot.on('message', async (msg) => {
-      const chatId = msg.chat.id;
-      console.log(`Received message from ${chatId}: ${msg.text}`);
+    try {
+      // 명령어 핸들러 등록
+      this.bot.command('start', this.handleStart.bind(this));
+      this.bot.command('help', this.handleHelp.bind(this));
+      this.bot.command('status', this.handleStatus.bind(this));
+      this.bot.command('challenge', this.handleChallenge.bind(this));
+      this.bot.command('subscribe', this.handleSubscribe.bind(this));
+      this.bot.command('unsubscribe', this.handleUnsubscribe.bind(this));
+      this.bot.command('broadcast', this.handleBroadcast.bind(this));
+
+      // 텍스트 메시지 핸들러 등록
+      this.bot.on('text', this.handleText.bind(this));
+
+      // 봇 시작
+      if (process.env.WEBHOOK_DOMAIN) {
+        await this.bot.launch({
+          webhook: {
+            domain: process.env.WEBHOOK_DOMAIN,
+            port: Number(process.env.WEBHOOK_PORT) || 8443,
+          },
+        });
+      } else {
+        await this.bot.launch();
+      }
+
+      console.log('Telegram bot started successfully');
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize Telegram bot:', error);
+      throw error;
+    }
+  }
+
+  private async handleStart(ctx: Context): Promise<void> {
+    if (!ctx.from) {
+      await ctx.reply('사용자 정보를 가져올 수 없습니다.');
+      return;
+    }
+    
+    const telegramId = BigInt(ctx.from.id);
+    this.userStates[telegramId.toString()] = 'waiting_for_email';
+    await ctx.reply('이메일을 입력해주세요.');
+  }
+
+  private async handleHelp(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+
+    try {
+      const helpText = `
+사용 가능한 명령어:
+/start - 봇 시작
+/help - 도움말 표시
+/status - 현재 상태 확인
+/challenge - 오늘의 챌린지 시작
+/subscribe - 구독 시작
+/unsubscribe - 구독 취소
+/broadcast - 관리자용 브로드캐스트 메시지 전송
+      `;
+      await ctx.reply(helpText);
+    } catch (error) {
+      console.error(`Error in handleHelp for chat ${chatId}:`, error);
+    }
+  }
+
+  private async handleStatus(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+
+    try {
+      await ctx.reply('현재 상태: 정상 작동 중');
+    } catch (error) {
+      console.error(`Error in handleStatus for chat ${chatId}:`, error);
+    }
+  }
+
+  private async handleChallenge(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+
+    try {
+      await ctx.reply('오늘의 한국어 챌린지: "안녕하세요"를 한국어로 말해보세요!');
+    } catch (error) {
+      console.error(`Error in handleChallenge for chat ${chatId}:`, error);
+    }
+  }
+
+  private async handleSubscribe(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+
+    try {
+      await ctx.reply('구독이 완료되었습니다. 매일 새로운 한국어 챌린지를 받아보세요!');
+    } catch (error) {
+      console.error(`Error in handleSubscribe for chat ${chatId}:`, error);
+    }
+  }
+
+  private async handleUnsubscribe(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+
+    try {
+      await ctx.reply('구독이 취소되었습니다. 다시 구독하시려면 /subscribe 명령어를 사용하세요.');
+    } catch (error) {
+      console.error(`Error in handleUnsubscribe for chat ${chatId}:`, error);
+    }
+  }
+
+  private async handleBroadcast(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId) return;
+
+    try {
+      // 관리자 권한 확인 로직 추가 필요
+      await ctx.reply('브로드캐스트 메시지를 입력하세요:');
+    } catch (error) {
+      console.error(`Error in handleBroadcast for chat ${chatId}:`, error);
+    }
+  }
+
+  private async handleText(ctx: Context): Promise<void> {
+    const chatId = ctx.chat?.id.toString();
+    const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : undefined;
+    
+    if (!chatId || !messageText) return;
+
+    const telegramId = ctx.from?.id ? BigInt(ctx.from.id) : undefined;
+    if (!telegramId) return;
+
+    const telegramIdStr = telegramId.toString();
+    if (this.userStates[telegramIdStr] === 'waiting_for_email') {
+      const email = messageText;
       
+      // 이메일 형식 검증
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        await ctx.reply('잘못된 이메일 형식입니다. 다시 입력해주세요.');
+        return;
+      }
+      
+      const user = await DatabaseService.getInstance().getUserByEmail(email);
+      
+      if (user) {
+        // 사용자의 텔레그램 ID를 업데이트합니다
+        await DatabaseService.getInstance().updateUser(user.id, { telegramId });
+        await ctx.reply('텔레그램 ID가 성공적으로 등록되었습니다.');
+      } else {
+        await ctx.reply('해당 이메일로 등록된 사용자를 찾을 수 없습니다.');
+      }
+      
+      delete this.userStates[telegramIdStr];
+    } else {
       // 에코 메시지로 응답 (테스트용)
-      try {
-        await this.bot.sendMessage(chatId, `Echo: ${msg.text}`);
-        console.log(`Sent echo message to ${chatId}`);
-      } catch (error) {
-        console.error(`Error sending echo message to ${chatId}:`, error);
-      }
-    });
+      await ctx.reply(`Echo: ${messageText}`);
+      console.log(`Sent echo message to ${chatId}`);
+    }
   }
 
-  public async createPrivateChat(telegramId: string): Promise<string> {
+  /**
+   * 특정 채팅방에 메시지를 전송합니다.
+   */
+  public async sendMessage(chatId: string | bigint, message: string): Promise<void> {
     try {
-      console.log(`Creating private chat for user ${telegramId}`);
-      
-      // 먼저 사용자와의 대화를 시작합니다
-      await this.bot.sendMessage(telegramId, "안녕하세요! 한국어 학습 챌린지에 오신 것을 환영합니다.");
-      console.log(`Sent welcome message to ${telegramId}`);
-      
-      // 채팅방 ID는 사용자의 Telegram ID와 동일합니다 (1:1 채팅의 경우)
-      const telegramChatId = telegramId;
-      
-      // 채팅방 권한 설정 (1:1 채팅에서는 필요 없음)
-      // 대신 봇이 관리자인 그룹 채팅방을 생성하는 로직이 필요합니다
-      
-      // 데이터베이스에 채팅 정보 저장
-      await this.databaseService.createChat(telegramId, telegramChatId);
-      console.log(`Chat created and saved for user ${telegramId}`);
-
-      return telegramChatId;
+      await this.bot.telegram.sendMessage(chatId.toString(), message);
     } catch (error) {
-      console.error('Error creating private chat:', error);
+      console.error(`Error sending message to chat ${chatId}:`, error);
       throw error;
     }
   }
 
-  public async sendMessageToAllChats(message: string) {
-    try {
-      console.log('Sending message to all chats:', message);
-      
-      // Get all active chats from the database
-      const activeChats = await this.databaseService.getActiveChats();
-      console.log(`Found ${activeChats.length} active chats`);
-      
-      // Send message to all active chats
-      for (const chatId of activeChats) {
-        try {
-          await this.bot.sendMessage(chatId, message);
-          console.log(`Sent message to chat ${chatId}`);
-        } catch (error) {
-          console.error(`Error sending message to chat ${chatId}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error('Error sending message to all chats:', error);
-      throw error;
+  /**
+   * 봇을 중지합니다.
+   */
+  public async stop(): Promise<void> {
+    if (this.isInitialized) {
+      await this.bot.stop();
+      this.isInitialized = false;
+      console.log('Telegram bot stopped');
     }
   }
-}
-
-export default TelegramBotService; 
+} 

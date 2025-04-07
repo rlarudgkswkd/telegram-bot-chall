@@ -1,23 +1,21 @@
 import nodemailer from 'nodemailer';
 import QRCode from 'qrcode';
 
-class EmailService {
-  private static instance: EmailService;
+export class EmailService {
   private transporter: nodemailer.Transporter;
+  private static instance: EmailService | null = null;
 
   private constructor() {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error('EMAIL_USER and EMAIL_PASS must be defined');
+    }
+
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
-      secure: false,
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
-      }
     });
   }
 
@@ -29,67 +27,59 @@ class EmailService {
   }
 
   /**
-   * Telegram 봇 링크를 이메일로 보냅니다.
-   * @param email 사용자 이메일
-   * @param name 사용자 이름
-   * @param isTrial 무료 체험 여부
-   * @param trialEndDate 무료 체험 종료일 (무료 체험인 경우)
+   * 이메일을 전송합니다.
    */
-  public async sendTelegramBotLink(
-    email: string,
-    name: string,
-    isTrial: boolean = false,
-    trialEndDate?: Date
-  ): Promise<void> {
+  public async sendEmail(to: string, subject: string, text: string, html?: string): Promise<void> {
     try {
-      // QR 코드 생성
-      const botLink = `https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}`;
-      const qrCodeDataUrl = await QRCode.toDataURL(botLink);
-
-      // 이메일 템플릿
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>안녕하세요, ${name}님!</h2>
-          <p>한국어 학습 챌린지에 오신 것을 환영합니다.</p>
-          ${
-            isTrial
-              ? `<p>무료 체험이 시작되었습니다. ${
-                  trialEndDate
-                    ? `체험 기간은 ${trialEndDate.toLocaleDateString(
-                        'ko-KR'
-                      )}까지입니다.`
-                    : ''
-                }</p>`
-              : '<p>구독이 시작되었습니다.</p>'
-          }
-          <p>아래 버튼을 클릭하거나 QR 코드를 스캔하여 Telegram 봇을 시작해주세요:</p>
-          <p>
-            <a href="${botLink}" 
-               style="background-color: #0088cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">
-              Telegram 봇 시작하기
-            </a>
-          </p>
-          <img src="${qrCodeDataUrl}" alt="Telegram Bot QR Code" style="width: 200px; height: 200px;"/>
-          <p>문의사항이 있으시면 언제든 회신해주세요.</p>
-          <p>감사합니다!</p>
-        </div>
-      `;
-
-      // 이메일 전송
-      await this.transporter.verify();
       await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM,
-        to: email,
-        subject: '한국어 학습 챌린지 - Telegram 봇 링크',
+        from: process.env.EMAIL_USER,
+        to,
+        subject,
+        text,
         html,
       });
-
-      console.log('Telegram bot link email sent successfully');
+      console.log(`Email sent to ${to}`);
     } catch (error) {
-      console.error('Error sending Telegram bot link email:', error);
+      console.error('Error sending email:', error);
       throw error;
     }
   }
-}
 
-export default EmailService; 
+  /**
+   * 텔레그램 봇 링크를 이메일로 전송합니다.
+   */
+  public async sendTelegramBotLink(email: string, name: string): Promise<void> {
+    const botUsername = 'KOR_Chall_bot';
+    const botLink = `https://t.me/${botUsername}`;
+    
+    const subject = '한국어 학습 챌린지에 오신 것을 환영합니다!';
+    const text = `안녕하세요, ${name}님!\n\n한국어 학습 챌린지에 오신 것을 환영합니다.\n\n무료 체험이 시작되었습니다. 체험 기간은 2025. 4. 8.까지입니다.\n\n아래 버튼을 클릭하거나 QR 코드를 스캔하여 Telegram 봇을 시작해주세요:\n${botLink}\n\n감사합니다!`;
+    
+    // QR 코드 생성
+    const qrCodeDataUrl = await QRCode.toDataURL(botLink);
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #1a365d;">안녕하세요, ${name}님!</h1>
+        <p style="font-size: 16px; color: #4a5568;">한국어 학습 챌린지에 오신 것을 환영합니다.</p>
+        <p style="font-size: 16px; color: #4a5568;">무료 체험이 시작되었습니다. 체험 기간은 2025. 4. 8.까지입니다.</p>
+        <p style="font-size: 16px; color: #4a5568;">아래 버튼을 클릭하거나 QR 코드를 스캔하여 Telegram 봇을 시작해주세요:</p>
+        
+        <div style="margin: 30px 0;">
+          <a href="${botLink}" 
+             style="display: inline-block; background-color: #3182ce; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Telegram 봇 시작하기
+          </a>
+        </div>
+        
+        <div style="margin: 30px 0;">
+          <img src="${qrCodeDataUrl}" alt="Telegram Bot QR Code" style="width: 200px; height: 200px;"/>
+        </div>
+        
+        <p style="font-size: 16px; color: #4a5568;">감사합니다!</p>
+      </div>
+    `;
+
+    await this.sendEmail(email, subject, text, html);
+  }
+} 
