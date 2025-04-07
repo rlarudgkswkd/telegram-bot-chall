@@ -46,6 +46,7 @@ export class DatabaseService {
    */
   public async getUserByEmail(email: string) {
     try {
+      console.log('Searching for user with email:', email);
       return await this.prisma.user.findUnique({
         where: { email },
       });
@@ -263,26 +264,20 @@ export class DatabaseService {
 
       console.log(`Found ${activeUsers.length} active users`);
 
-      // 각 사용자의 채팅방 수집
+      // 각 사용자별로 채팅 확인 및 생성
       let chats: { id: string; telegramId: string }[] = [];
       
-      // 기존 채팅방 수집
-      activeUsers.forEach((user: any) => {
-        if (user.chats && user.chats.length > 0) {
-          chats.push(...user.chats);
-        }
-      });
-
-      // 채팅방이 없는 경우, 텔레그램 ID를 사용하여 채팅방을 생성합니다
-      if (chats.length === 0) {
-        console.log('No chats found for active users, creating chats...');
-        
-        for (const user of activeUsers) {
+      for (const user of activeUsers) {
+        if (!user.chats || user.chats.length === 0) {
           if (user.telegramId) {
             try {
-              // 텔레그램 ID를 채팅방 ID로 사용하여 채팅방을 생성합니다
-              const chat = await this.createChat(user.telegramId);
-              console.log(`Created chat for user ${user.id} with telegram ID ${user.telegramId}`);
+              const chat = await this.prisma.chat.create({
+                data: {
+                  telegramId: user.telegramId.toString(),
+                  userId: user.id
+                }
+              });
+              console.log(`Created new chat for user ${user.id} with telegram ID ${user.telegramId}`);
               chats.push({
                 id: chat.id,
                 telegramId: chat.telegramId
@@ -291,6 +286,8 @@ export class DatabaseService {
               console.error(`Error creating chat for user ${user.id}:`, error);
             }
           }
+        } else {
+          chats.push(...user.chats);
         }
       }
 

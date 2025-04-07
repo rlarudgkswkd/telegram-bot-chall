@@ -10,7 +10,7 @@ export class TelegramBotService {
   private prisma: PrismaClient;
   private static instance: TelegramBotService | null = null;
   private isInitialized: boolean = false;
-  private userStates: { [key: string]: string } = {};
+  private userStates: { [key: string]: { state: string; retryCount?: number } } = {};
 
   private constructor() {
     if (!process.env.TELEGRAM_BOT_TOKEN) {
@@ -21,11 +21,20 @@ export class TelegramBotService {
     this.db = DatabaseService.getInstance();
     //this.emailService = EmailService.getInstance();
     this.prisma = new PrismaClient();
+
+    // Webhook 설정에 필요한 환경변수 검증
+    if (!process.env.WEBHOOK_DOMAIN) {
+      throw new Error('WEBHOOK_DOMAIN is not defined');
+    }
+    if (!process.env.WEBHOOK_PATH) {
+      throw new Error('WEBHOOK_PATH is not defined');
+    }
   }
 
-  public static getInstance(): TelegramBotService {
+  public static async getInstance(): Promise<TelegramBotService> {
     if (!TelegramBotService.instance) {
       TelegramBotService.instance = new TelegramBotService();
+      await TelegramBotService.instance.initialize();
     }
     return TelegramBotService.instance;
   }
@@ -35,6 +44,8 @@ export class TelegramBotService {
       console.log('TelegramBotService is already initialized');
       return;
     }
+
+    console.log('Initializing TelegramBotService...');
 
     try {
       // 명령어 핸들러 등록
@@ -49,19 +60,34 @@ export class TelegramBotService {
       // 텍스트 메시지 핸들러 등록
       this.bot.on('text', this.handleText.bind(this));
 
-      // 봇 시작
-      if (process.env.WEBHOOK_DOMAIN) {
-        await this.bot.launch({
-          webhook: {
-            domain: process.env.WEBHOOK_DOMAIN,
-            port: Number(process.env.WEBHOOK_PORT) || 8443,
-          },
-        });
-      } else {
-        await this.bot.launch();
-      }
+      // Webhook 설정
+      const webhookDomain = process.env.WEBHOOK_DOMAIN!;
+      const webhookPath = process.env.WEBHOOK_PATH!;
+      const webhookUrl = `${webhookDomain}${webhookPath}`;
+      const port = Number(process.env.WEBHOOK_PORT) || 3000;
 
-      console.log('Telegram bot started successfully');
+      // 기존 webhook 설정 제거
+      await this.bot.telegram.deleteWebhook();
+      
+      // 새로운 webhook 설정
+      await this.bot.telegram.setWebhook(webhookUrl);
+      
+      // Webhook 서버 시작
+      await this.bot.launch({
+        webhook: {
+          domain: webhookDomain,
+          path: webhookPath,
+          port
+        }
+      });
+
+      console.log(`Telegram bot webhook set up successfully at ${webhookUrl}`);
+      console.log(`Webhook server listening on port ${port}`);
+      
+      // Graceful shutdown 설정
+      process.once('SIGINT', () => this.stop());
+      process.once('SIGTERM', () => this.stop());
+
       this.isInitialized = true;
     } catch (error) {
       console.error('Failed to initialize Telegram bot:', error);
@@ -70,14 +96,21 @@ export class TelegramBotService {
   }
 
   private async handleStart(ctx: Context): Promise<void> {
+    console.log('🤖 /start command received');
+    
     if (!ctx.from) {
+      console.log('❌ User information not available');
       await ctx.reply('사용자 정보를 가져올 수 없습니다.');
       return;
     }
     
     const telegramId = ctx.from.id.toString();
-    this.userStates[telegramId] = 'waiting_for_email';
+    const username = ctx.from.username || 'unknown';
+    console.log(`✨ New user starting bot - Telegram ID: ${telegramId}, Username: @${username}`);
+    
+    this.userStates[telegramId] = { state: 'waiting_for_email' };
     await ctx.reply('이메일을 입력해주세요.');
+    console.log(`📧 Waiting for email from user ${telegramId}`);
   }
 
   private async handleHelp(ctx: Context): Promise<void> {
@@ -166,7 +199,8 @@ export class TelegramBotService {
     const telegramId = ctx.from?.id ? ctx.from.id.toString() : undefined;
     if (!telegramId) return;
 
-    if (this.userStates[telegramId] === 'waiting_for_email') {
+    const userState = this.userStates[telegramId];
+    if (userState?.state === 'waiting_for_email') {
       const email = messageText;
       
       // 이메일 형식 검증
@@ -182,15 +216,43 @@ export class TelegramBotService {
         // 사용자의 텔레그램 ID를 업데이트합니다
         await DatabaseService.getInstance().updateUser(user.id, { telegramId });
         await ctx.reply('텔레그램 ID가 성공적으로 등록되었습니다.');
+        delete this.userStates[telegramId];
       } else {
-        await ctx.reply('해당 이메일로 등록된 사용자를 찾을 수 없습니다.');
+        // 재시도 횟수 증가
+        userState.retryCount = (userState.retryCount || 0) + 1;
+        
+        if (userState.retryCount >= 3) {
+          const adminContactMessage = `
+해당 이메일로 등록된 사용자를 찾을 수 없습니다.
+최대 시도 횟수를 초과했습니다.
+
+관리자에게 문의해 주세요:
+- 이메일: vietolleckhkim@gmail.com
+- 텔레그램: @goregoreda`;
+          
+          await ctx.reply(adminContactMessage);
+          delete this.userStates[telegramId];
+        } else {
+          const remainingAttempts = 3 - userState.retryCount;
+          await ctx.reply(`해당 이메일로 등록된 사용자를 찾을 수 없습니다.\n남은 시도 횟수: ${remainingAttempts}회\n\n다시 이메일을 입력해주세요.`);
+        }
       }
-      
-      delete this.userStates[telegramId];
     } else {
       // 에코 메시지로 응답 (테스트용)
       await ctx.reply(`Echo: ${messageText}`);
       console.log(`Sent echo message to ${chatId}`);
+    }
+  }
+
+  /**
+   * Webhook 핸들러 - Next.js API 라우트에서 사용
+   */
+  public async handleUpdate(update: any): Promise<void> {
+    try {
+      await this.bot.handleUpdate(update);
+    } catch (error) {
+      console.error('Error handling webhook update:', error);
+      throw error;
     }
   }
 
@@ -207,13 +269,15 @@ export class TelegramBotService {
   }
 
   /**
-   * 봇을 중지합니다.
+   * 봇을 안전하게 중지합니다.
    */
   public async stop(): Promise<void> {
     if (this.isInitialized) {
-      await this.bot.stop();
+      // Webhook 제거
+      await this.bot.telegram.deleteWebhook();
+      await this.bot.stop('SIGINT');
       this.isInitialized = false;
-      console.log('Telegram bot stopped');
+      console.log('Telegram bot stopped gracefully');
     }
   }
 } 

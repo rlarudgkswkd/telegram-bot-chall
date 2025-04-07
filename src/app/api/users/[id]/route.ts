@@ -7,8 +7,7 @@ export const PATCH = adminAuth(async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    const { id } = params;
-    console.log('PATCH params:', params);
+    const { id } = await params;
 
     const body = await request.json();
     const { name, email, userStatus } = body;
@@ -35,8 +34,7 @@ export const DELETE = adminAuth(async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    const { id } = params;
-    console.log('DELETE params:', params);
+    const { id } = await params;
 
     // 사용자 삭제
     await DatabaseService.getInstance().deleteUser(id);

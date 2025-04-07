@@ -32,7 +32,7 @@ async function handler(request: Request) {
     }
     
     // 텔레그램 봇 서비스 가져오기
-    const telegramBot = TelegramBotService.getInstance();
+    const telegramBot = await TelegramBotService.getInstance();
     
     // 결과 추적
     let successCount = 0;
