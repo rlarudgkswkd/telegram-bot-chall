@@ -41,12 +41,12 @@ async function handler(request: Request) {
     // 각 채팅방에 메시지 전송
     for (const chat of activeChats) {
       try {
-        console.log(`Sending message to chat ${chat.telegramChatId}...`);
-        await telegramBot.sendMessage(chat.telegramChatId, message);
-        console.log(`Successfully sent message to chat ${chat.telegramChatId}`);
+        console.log(`Sending message to chat ${chat.telegramId}...`);
+        await telegramBot.sendMessage(chat.telegramId, message);
+        console.log(`Successfully sent message to chat ${chat.telegramId}`);
         successCount++;
       } catch (error) {
-        console.error(`Failed to send message to chat ${chat.telegramChatId}:`, error);
+        console.error(`Failed to send message to chat ${chat.telegramId}:`, error);
         failedCount++;
       }
     }

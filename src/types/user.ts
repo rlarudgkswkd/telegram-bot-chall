@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string | null;
   email: string;
-  telegramId: bigint | null;
+  telegramId: string | null;
   isActive: boolean;
   userStatus: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
@@ -14,7 +14,7 @@ export interface User {
 
 export interface Chat {
   id: string;
-  telegramChatId: bigint;
+  telegramId: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;

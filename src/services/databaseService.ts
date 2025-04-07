@@ -58,7 +58,7 @@ export class DatabaseService {
   /**
    * 텔레그램 ID로 사용자를 찾습니다.
    */
-  public async getUserByTelegramId(telegramId: bigint) {
+  public async getUserByTelegramId(telegramId: string) {
     try {
       return await this.prisma.user.findUnique({
         where: { telegramId },
@@ -86,7 +86,7 @@ export class DatabaseService {
   /**
    * 사용자의 텔레그램 ID를 업데이트합니다.
    */
-  public async updateUserTelegramId(userId: string, telegramId: bigint) {
+  public async updateUserTelegramId(userId: string, telegramId: string) {
     try {
       return await this.prisma.user.update({
         where: { id: userId },
@@ -101,7 +101,7 @@ export class DatabaseService {
   /**
    * 새로운 채팅을 생성합니다.
    */
-  public async createChat(telegramId: bigint, telegramChatId: bigint) {
+  public async createChat(telegramId: string) {
     try {
       // 먼저 사용자를 찾습니다
       let user = await this.getUserByTelegramId(telegramId);
@@ -109,8 +109,8 @@ export class DatabaseService {
       // 사용자가 없으면 임시 사용자를 생성합니다
       if (!user) {
         const tempUser = await this.createUser(
-          `temp_${telegramId.toString()}@telegram.user`,
-          `Telegram User ${telegramId.toString()}`
+          `temp_${telegramId}@telegram.user`,
+          `Telegram User ${telegramId}`
         );
         await this.updateUserTelegramId(tempUser.id, telegramId);
         user = await this.getUserById(tempUser.id);
@@ -123,7 +123,7 @@ export class DatabaseService {
       // 채팅을 생성합니다
       return await this.prisma.chat.create({
         data: {
-          telegramChatId,
+          telegramId,
           userId: user.id,
         },
       });
@@ -235,7 +235,7 @@ export class DatabaseService {
   /**
    * 활성 채팅방 목록을 가져옵니다.
    */
-  public async getActiveChats(): Promise<{ id: string; telegramChatId: bigint }[]> {
+  public async getActiveChats(): Promise<{ id: string; telegramId: string }[]> {
     try {
       // 활성 사용자 찾기
       const activeUsers = await this.prisma.user.findMany({
@@ -255,7 +255,7 @@ export class DatabaseService {
           chats: {
             select: {
               id: true,
-              telegramChatId: true
+              telegramId: true
             }
           }
         }
@@ -264,10 +264,10 @@ export class DatabaseService {
       console.log(`Found ${activeUsers.length} active users`);
 
       // 각 사용자의 채팅방 수집
-      let chats: { id: string; telegramChatId: bigint }[] = [];
+      let chats: { id: string; telegramId: string }[] = [];
       
       // 기존 채팅방 수집
-      activeUsers.forEach((user: User) => {
+      activeUsers.forEach((user: any) => {
         if (user.chats && user.chats.length > 0) {
           chats.push(...user.chats);
         }
@@ -281,11 +281,11 @@ export class DatabaseService {
           if (user.telegramId) {
             try {
               // 텔레그램 ID를 채팅방 ID로 사용하여 채팅방을 생성합니다
-              const chat = await this.createChat(user.telegramId, user.telegramId);
-              console.log(`Created chat for user ${user.id} with telegram ID ${user.telegramId.toString()}`);
+              const chat = await this.createChat(user.telegramId);
+              console.log(`Created chat for user ${user.id} with telegram ID ${user.telegramId}`);
               chats.push({
                 id: chat.id,
-                telegramChatId: chat.telegramChatId
+                telegramId: chat.telegramId
               });
             } catch (error) {
               console.error(`Error creating chat for user ${user.id}:`, error);
@@ -305,7 +305,7 @@ export class DatabaseService {
    * 사용자 정보를 업데이트합니다.
    */
   public async updateUser(userId: string, data: { 
-    telegramId?: bigint;
+    telegramId?: string;
     name?: string;
     email?: string;
     userStatus?: string;

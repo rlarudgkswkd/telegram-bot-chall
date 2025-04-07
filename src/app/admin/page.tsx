@@ -27,7 +27,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  telegramId: bigint | null;
+  telegramId: string | null;
   userStatus: string;
   subscriptions: Subscription[];
   paymentRequests: PaymentRequest[];

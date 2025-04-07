@@ -17,7 +17,7 @@ model User {
   id            String         @id @default(uuid())
   name          String?
   email         String        @unique
-  telegramId    BigInt?       @unique
+  telegramId    String?       @unique
   isActive      Boolean       @default(true)
   userStatus    String        @default("active") // active, inactive, suspended
   createdAt     DateTime      @default(now())
@@ -29,7 +29,7 @@ model User {
 
 model Chat {
   id             String   @id @default(uuid())
-  telegramChatId BigInt   @unique
+  telegramId     String   @unique
   user           User     @relation(fields: [userId], references: [id])
   userId         String
   createdAt      DateTime @default(now())

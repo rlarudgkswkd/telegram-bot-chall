@@ -75,8 +75,8 @@ export class TelegramBotService {
       return;
     }
     
-    const telegramId = BigInt(ctx.from.id);
-    this.userStates[telegramId.toString()] = 'waiting_for_email';
+    const telegramId = ctx.from.id.toString();
+    this.userStates[telegramId] = 'waiting_for_email';
     await ctx.reply('이메일을 입력해주세요.');
   }
 
@@ -163,11 +163,10 @@ export class TelegramBotService {
     
     if (!chatId || !messageText) return;
 
-    const telegramId = ctx.from?.id ? BigInt(ctx.from.id) : undefined;
+    const telegramId = ctx.from?.id ? ctx.from.id.toString() : undefined;
     if (!telegramId) return;
 
-    const telegramIdStr = telegramId.toString();
-    if (this.userStates[telegramIdStr] === 'waiting_for_email') {
+    if (this.userStates[telegramId] === 'waiting_for_email') {
       const email = messageText;
       
       // 이메일 형식 검증
@@ -187,7 +186,7 @@ export class TelegramBotService {
         await ctx.reply('해당 이메일로 등록된 사용자를 찾을 수 없습니다.');
       }
       
-      delete this.userStates[telegramIdStr];
+      delete this.userStates[telegramId];
     } else {
       // 에코 메시지로 응답 (테스트용)
       await ctx.reply(`Echo: ${messageText}`);
@@ -198,9 +197,9 @@ export class TelegramBotService {
   /**
    * 특정 채팅방에 메시지를 전송합니다.
    */
-  public async sendMessage(chatId: string | bigint, message: string): Promise<void> {
+  public async sendMessage(chatId: string, message: string): Promise<void> {
     try {
-      await this.bot.telegram.sendMessage(chatId.toString(), message);
+      await this.bot.telegram.sendMessage(chatId, message);
     } catch (error) {
       console.error(`Error sending message to chat ${chatId}:`, error);
       throw error;

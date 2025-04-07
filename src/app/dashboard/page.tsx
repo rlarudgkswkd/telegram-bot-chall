@@ -97,13 +97,13 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div>
                   <p className="text-gray-600">구독 플랜</p>
-                  <p className="font-medium">
+                  <p className="font-medium text-black">
                     {subscription.plan === 'trial' ? '무료 체험' : '월간 구독'}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-600">만료일</p>
-                  <p className="font-medium">{formatDate(subscription.endDate)}</p>
+                  <p className="font-medium text-black">{formatDate(subscription.endDate)}</p>
                 </div>
                 {subscription.isTrial && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
@@ -128,7 +128,7 @@ export default function DashboardPage() {
               한국어 학습 챌린지 Telegram 봇을 통해 1:1 한국어 학습을 시작하세요.
             </p>
             <a
-              href="https://t.me/KOR_Chall_bot"
+              href={process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full bg-blue-600 text-white text-center py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
