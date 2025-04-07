@@ -1,24 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Korean Language Learning Challenge Platform
+
+This is a platform for learning Korean language through daily challenges and interactions with a Telegram bot.
+
+## Implemented Features
+
+### User Management
+- User registration with email verification
+- JWT-based authentication system
+- User status management (active/inactive/suspended)
+- Protected routes with authentication middleware
+- Automatic login after registration
+
+### Subscription System
+- Free trial subscription (7 days)
+- Premium subscription plans (monthly/yearly)
+- Subscription status tracking
+- PayPal integration for payments
+- Subscription management in admin dashboard
+
+### Admin Dashboard
+- User management interface
+- User status and subscription editing
+- Broadcast message functionality
+- User activity monitoring
+- Protected admin routes with Basic authentication
+
+### Telegram Bot Integration
+- Automatic bot registration via email
+- QR code generation for bot access
+- User-bot linking system
+- Chat history tracking
+- Broadcast message system for active users
+
+### Email System
+- Welcome email with Telegram bot link
+- QR code integration in emails
+- HTML email templates
+- Subscription status notifications
+- Trial expiration notifications
+
+### Security
+- JWT-based authentication
+- HTTP-only cookies
+- Protected API endpoints
+- Secure admin authentication
+- Rate limiting for API calls
+
+### Database
+- PostgreSQL with Prisma ORM
+- User data management
+- Subscription tracking
+- Chat history storage
+- Payment request tracking
 
 ## Getting Started
 
-First, run the development server:
+First, set up your environment variables:
+
+```bash
+# Database
+DATABASE_URL="postgresql://..."
+
+# JWT
+JWT_SECRET="your-secret-key"
+
+# Telegram
+TELEGRAM_BOT_TOKEN="your-bot-token"
+
+# PayPal
+PAYPAL_CLIENT_ID="your-client-id"
+PAYPAL_CLIENT_SECRET="your-client-secret"
+
+# Admin
+ADMIN_EMAIL="admin@example.com"
+ADMIN_PASSWORD="your-secure-password"
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
 
@@ -26,8 +92,6 @@ To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 
