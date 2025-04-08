@@ -42,12 +42,15 @@ export default function SubscribePage() {
         body: JSON.stringify({ userId: data.userId }),
       });
 
+      console.log("paymentResponse: ", paymentResponse);
+
       if (!paymentResponse.ok) {
         const paymentData = await paymentResponse.json();
         throw new Error(paymentData.error || 'Failed to create payment');
       }
 
       const paymentData = await paymentResponse.json();
+      console.log("paymentData", paymentData);
       
       // PayPal 결제 페이지로 리다이렉트
       window.location.href = paymentData.approvalUrl;

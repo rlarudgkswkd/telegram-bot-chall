@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { Switch } from '@headlessui/react';
 
 interface PaymentRequest {
   id: string;
@@ -33,15 +34,21 @@ interface User {
   paymentRequests: PaymentRequest[];
 }
 
+function classNames(...classes: string[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
 export default function AdminPage() {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isTestMode, setIsTestMode] = useState(false);
 
   useEffect(() => {
     fetchUsers();
+    fetchTestModeStatus();
   }, []);
 
   const fetchUsers = async () => {
@@ -55,6 +62,20 @@ export default function AdminPage() {
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTestModeStatus = async () => {
+    try {
+      const response = await fetch('/api/admin/paypal/test-mode');
+      if (!response.ok) {
+        const errorMessage = await response.text();
+        throw new Error(`Failed to fetch test mode status: ${response.status} ${errorMessage}`);
+      }
+      const data = await response.json();
+      setIsTestMode(data.enabled);
+    } catch (error) {
+      console.error('Error loading test mode status:', error);
     }
   };
 
@@ -157,6 +178,26 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('사용자 삭제에 실패했습니다.');
+    }
+  };
+
+  const toggleTestMode = async () => {
+    try {
+      const response = await fetch('/api/admin/paypal/test-mode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled: !isTestMode }),
+      });
+
+      if (response.ok) {
+        setIsTestMode(!isTestMode);
+      } else {
+        console.error('Failed to update test mode');
+      }
+    } catch (error) {
+      console.error('Error updating test mode:', error);
     }
   };
 
@@ -342,6 +383,50 @@ export default function AdminPage() {
                 </TableBody>
               </Table>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-8">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold mb-4 text-black">PayPal Test Mode</h2>
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-gray-900">
+                {isTestMode ? 'Test mode is enabled' : 'Test mode is disabled'}
+              </span>
+              <Switch
+                checked={isTestMode}
+                onChange={toggleTestMode}
+                className={classNames(
+                  isTestMode ? 'bg-indigo-600' : 'bg-gray-200',
+                  'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2'
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className={classNames(
+                    isTestMode ? 'translate-x-5' : 'translate-x-0',
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
+                  )}
+                />
+              </Switch>
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              {isTestMode
+                ? 'Test mode is enabled. All payments will be processed through PayPal Sandbox.'
+                : 'Test mode is disabled. All payments will be processed through live PayPal.'}
+            </p>
+            {isTestMode && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-sm font-medium text-gray-900">Test Account Information</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  To test payments, use these PayPal Sandbox accounts:
+                </p>
+                <ul className="mt-2 text-sm text-gray-500 list-disc list-inside">
+                  <li>Buyer: Create a sandbox account at developer.paypal.com</li>
+                  <li>Seller: Your sandbox merchant account</li>
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const paypalService = PayPalService.getInstance();
-    await paypalService.capturePayment(orderId);
+    await (await paypalService).capturePayment(orderId);
 
     return NextResponse.json({
       message: '결제가 완료되었습니다.',

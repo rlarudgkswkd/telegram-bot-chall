@@ -381,4 +381,41 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  public async getPaymentRequestByOrderId(orderId: string) {
+    return await this.prisma.paymentRequest.findUnique({
+      where: { paypalOrderId: orderId }
+    });
+  }
+
+  public async updatePaymentRequestStatus(orderId: string, status: string) {
+    return await this.prisma.paymentRequest.update({
+      where: { paypalOrderId: orderId },
+      data: { status }
+    });
+  }
+
+  public async updateUserSubscription(
+    id: string,
+    userId: string,
+    status: string,
+    startDate: Date,
+    endDate: Date
+  ) {
+    return await this.prisma.subscription.upsert({
+      where: { id, userId },
+      update: {
+        status,
+        startDate,
+        endDate
+      },
+      create: {
+        userId,
+        status,
+        startDate,
+        endDate,
+        plan: 'premium'
+      }
+    });
+  }
 } 

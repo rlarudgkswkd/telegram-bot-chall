@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "password" TEXT,
+ADD COLUMN     "role" TEXT NOT NULL DEFAULT 'USER',
+ALTER COLUMN "userStatus" SET DEFAULT 'FREE_TRIAL';

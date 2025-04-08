@@ -82,4 +82,29 @@ export class EmailService {
 
     await this.sendEmail(email, subject, text, html);
   }
+
+  public async sendPaymentConfirmation(email: string, amount: number, endDate: Date) {
+    const formattedDate = endDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const subject = 'Payment Confirmation - Premium Subscription Activated';
+    const html = `
+      <h1>Thank you for your payment!</h1>
+      <p>We've received your payment of $${amount.toFixed(2)} and your premium subscription has been activated.</p>
+      <p>Your subscription will be active until ${formattedDate}.</p>
+      <p>You now have full access to all premium features including:</p>
+      <ul>
+        <li>Unlimited conversations with our AI language tutor</li>
+        <li>Advanced grammar correction</li>
+        <li>Vocabulary suggestions</li>
+        <li>Progress tracking</li>
+      </ul>
+      <p>If you have any questions, please don't hesitate to contact our support team.</p>
+    `;
+
+    await this.sendEmail(email, subject, '', html);
+  }
 } 

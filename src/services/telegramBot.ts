@@ -48,42 +48,22 @@ export class TelegramBotService {
     console.log('Initializing TelegramBotService...');
 
     try {
-      // 명령어 핸들러 등록
-      this.bot.command('start', this.handleStart.bind(this));
-      this.bot.command('help', this.handleHelp.bind(this));
-      this.bot.command('status', this.handleStatus.bind(this));
-      this.bot.command('challenge', this.handleChallenge.bind(this));
-      this.bot.command('subscribe', this.handleSubscribe.bind(this));
-      this.bot.command('unsubscribe', this.handleUnsubscribe.bind(this));
-      this.bot.command('broadcast', this.handleBroadcast.bind(this));
-
-      // 텍스트 메시지 핸들러 등록
-      this.bot.on('text', this.handleText.bind(this));
-
-      // Webhook 설정
-      const webhookDomain = process.env.WEBHOOK_DOMAIN!;
-      const webhookPath = process.env.WEBHOOK_PATH!;
+      const webhookDomain = process.env.WEBHOOK_DOMAIN;
+      const webhookPath = process.env.WEBHOOK_PATH || '/api/telegram/webhook';
       const webhookUrl = `${webhookDomain}${webhookPath}`;
-      const port = Number(process.env.WEBHOOK_PORT) || 3000;
 
-      // 기존 webhook 설정 제거
+      if (!webhookDomain) {
+        throw new Error('WEBHOOK_DOMAIN environment variable is not set');
+      }
+
+      // 기존 webhook 삭제
       await this.bot.telegram.deleteWebhook();
       
       // 새로운 webhook 설정
       await this.bot.telegram.setWebhook(webhookUrl);
       
-      // Webhook 서버 시작
-      await this.bot.launch({
-        webhook: {
-          domain: webhookDomain,
-          path: webhookPath,
-          port
-        }
-      });
-
       console.log(`Telegram bot webhook set up successfully at ${webhookUrl}`);
-      console.log(`Webhook server listening on port ${port}`);
-      
+
       // Graceful shutdown 설정
       process.once('SIGINT', () => this.stop());
       process.once('SIGTERM', () => this.stop());
