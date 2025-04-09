@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { DatabaseService } from '@/services/databaseService';
-import { PayPalService } from '@/services/paypalService';
+import  PayPalService  from '@/services/paypalService';
 
 export const GET = async (request: NextRequest) => {
     try {

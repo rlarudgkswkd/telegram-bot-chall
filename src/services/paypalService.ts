@@ -3,7 +3,7 @@ import { TelegramBotService } from './telegramBot';
 import { EmailService } from './emailService';
 import { DatabaseService } from './databaseService';
 
-export class PayPalService {
+class PayPalService {
   private static instance: PayPalService;
   private prisma: PrismaClient;
   private telegramBot!: TelegramBotService;
