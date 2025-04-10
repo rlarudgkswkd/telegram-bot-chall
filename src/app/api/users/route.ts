@@ -5,6 +5,7 @@ import { DatabaseService } from '@/services/databaseService';
 
 export const GET = adminAuth(async () => {
   try {
+    console.log('Fetching all users');
     const db = DatabaseService.getInstance();
     const users = await db.getAllUsers();
     return NextResponse.json(users);

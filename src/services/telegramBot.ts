@@ -59,6 +59,18 @@ export class TelegramBotService {
       // 기존 webhook 삭제
       await this.bot.telegram.deleteWebhook();
       
+      // 커맨드 핸들러 등록
+      this.bot.command('start', (ctx) => this.handleStart(ctx));
+      this.bot.command('help', (ctx) => this.handleHelp(ctx));
+      this.bot.command('status', (ctx) => this.handleStatus(ctx));
+      this.bot.command('challenge', (ctx) => this.handleChallenge(ctx));
+      this.bot.command('subscribe', (ctx) => this.handleSubscribe(ctx));
+      this.bot.command('unsubscribe', (ctx) => this.handleUnsubscribe(ctx));
+      this.bot.command('broadcast', (ctx) => this.handleBroadcast(ctx));
+      
+      // 텍스트 메시지 핸들러 등록
+      this.bot.on('text', (ctx) => this.handleText(ctx));
+      
       // 새로운 webhook 설정
       await this.bot.telegram.setWebhook(webhookUrl);
       
@@ -69,6 +81,7 @@ export class TelegramBotService {
       process.once('SIGTERM', () => this.stop());
 
       this.isInitialized = true;
+      console.log('TelegramBotService initialized with all command handlers');
     } catch (error) {
       console.error('Failed to initialize Telegram bot:', error);
       throw error;
@@ -241,7 +254,11 @@ export class TelegramBotService {
    */
   public async sendMessage(chatId: string, message: string): Promise<void> {
     try {
-      await this.bot.telegram.sendMessage(chatId, message);
+      await this.bot.telegram.sendMessage(chatId, message, {
+        // parse_mode: 'HTML', // 또는 'MarkdownV2'
+        parse_mode: 'MarkdownV2', // 또는 'MarkdownV2'
+        // disable_web_page_preview: false, // 미리보기 활성화
+      });
     } catch (error) {
       console.error(`Error sending message to chat ${chatId}:`, error);
       throw error;

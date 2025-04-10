@@ -87,7 +87,7 @@ export default function AdminPage() {
 
     setIsSending(true);
     try {
-      const response = await fetch('/api/broadcast', {
+      const response = await fetch('/api/admin/broadcast', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

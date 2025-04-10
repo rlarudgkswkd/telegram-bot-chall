@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.1",
+    "@heroicons/react": "^2.2.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/paypal-js": "^8.2.0",
     "@paypal/react-paypal-js": "^8.8.2",
@@ -24,6 +25,7 @@
     "lucide-react": "^0.487.0",
     "next": "15.2.4",
     "next-auth": "^4.24.11",
+    "next-intl": "^4.0.2",
     "node-telegram-bot-api": "^0.66.0",
     "nodemailer": "^6.10.0",
     "qrcode": "^1.5.4",

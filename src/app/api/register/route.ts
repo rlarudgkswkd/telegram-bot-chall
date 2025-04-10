@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
     // 무료 체험 시작
     if (startTrial) {
-      const paypalService = PayPalService.getInstance();
+      const paypalService = await PayPalService.getInstance();
       await paypalService.startTrial(user.id);
     }
 
