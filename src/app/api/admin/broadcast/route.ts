@@ -83,13 +83,13 @@ export const POST = adminAuth(async (request: Request) => {
     }
 
     // 메시지 형식 검증 및 이스케이프 처리
-    const validation = validateAndEscapeMessage(message);
-    if (!validation.isValid) {
-      return NextResponse.json({
-        error: validation.error,
-        success: false
-      }, { status: 400 });
-    }
+    // const validation = validateAndEscapeMessage(message);
+    // if (!validation.isValid) {
+    //   return NextResponse.json({
+    //     error: validation.error,
+    //     success: false
+    //   }, { status: 400 });
+    // }
 
     const db = DatabaseService.getInstance();
     const activeChats = await db.getActiveChats();
@@ -114,7 +114,8 @@ export const POST = adminAuth(async (request: Request) => {
     for (const chat of activeChats) {
       try {
         console.log(`Sending message to chat ${chat.telegramId}...`);
-        await telegramBot.sendMessage(chat.telegramId, validation.message);
+        // await telegramBot.sendMessage(chat.telegramId, validation.message);
+        await telegramBot.sendMessage(chat.telegramId, message);
         console.log(`Successfully sent message to chat ${chat.telegramId}`);
         successCount++;
       } catch (error) {

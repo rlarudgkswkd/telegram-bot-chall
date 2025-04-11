@@ -255,8 +255,7 @@ export class TelegramBotService {
   public async sendMessage(chatId: string, message: string): Promise<void> {
     try {
       await this.bot.telegram.sendMessage(chatId, message, {
-        // parse_mode: 'HTML', // 또는 'MarkdownV2'
-        parse_mode: 'MarkdownV2', // 또는 'MarkdownV2'
+        parse_mode: 'HTML', // 또는 'MarkdownV2'
         // disable_web_page_preview: false, // 미리보기 활성화
       });
     } catch (error) {
